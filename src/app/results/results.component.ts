@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { SearchService } from '../search.service';
+import { ThemeService } from '../theme.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import * as fromRoot from '../reducers';
@@ -36,6 +37,8 @@ export class ResultsComponent implements OnInit {
   };
   querylook = {};
   hidefooter = 1;
+  querychange$: Observable<any>;
+  resultscomponentchange$: Observable<any>;
   getNumber(N) {
     let result = Array.apply(null, { length: N }).map(Number.call, Number);
     if (result.length > 10) {
@@ -48,7 +51,7 @@ export class ResultsComponent implements OnInit {
 
   getPresentPage(N) {
     this.presentPage = N;
-    this.searchdata.start = (this.presentPage) * this.searchdata.rows;
+    this.searchdata.start = (this.presentPage - 1) * this.searchdata.rows;
     this.route.navigate(['/search'], { queryParams: this.searchdata });
   }
 
@@ -73,6 +76,7 @@ export class ResultsComponent implements OnInit {
     this.resultDisplay = 'videos';
     this.searchdata.rows = 10;
     this.searchdata.fq = 'url_file_ext_s:(avi+OR+mov+OR+flw+OR+mp4)';
+    this.searchdata.resultDisplay = this.resultDisplay;
     this.route.navigate(['/search'], { queryParams: this.searchdata });
   }
 
@@ -91,6 +95,7 @@ export class ResultsComponent implements OnInit {
     this.resultDisplay = 'all';
     delete this.searchdata.fq;
     this.searchdata.rows = 10;
+    this.searchdata.resultDisplay = this.resultDisplay;
     this.route.navigate(['/search'], { queryParams: this.searchdata });
   }
 
@@ -109,7 +114,7 @@ export class ResultsComponent implements OnInit {
   }
 
   constructor(private searchservice: SearchService, private route: Router, private activatedroute: ActivatedRoute,
-              private store: Store<fromRoot.State>, private ref: ChangeDetectorRef) {
+              private store: Store<fromRoot.State>, private ref: ChangeDetectorRef, public themeService: ThemeService) {
 
     this.activatedroute.queryParams.subscribe(query => {
       this.hidefooter = 1;
@@ -135,7 +140,12 @@ export class ResultsComponent implements OnInit {
 
 
 
-      this.presentPage = Math.abs(query['start'] / this.searchdata.rows) + 1;
+      if (query['start']) {
+        this.searchdata.start = query['start'];
+      } else {
+        this.searchdata.start = 0;
+      }
+
       this.searchdata.query = query['query'];
       this.store.dispatch(new queryactions.QueryAction(query['query']));
       this.querylook = Object.assign({}, query);
@@ -147,21 +157,11 @@ export class ResultsComponent implements OnInit {
 
       this.store.dispatch(new queryactions.QueryServerAction(query));
       this.items$ = store.select(fromRoot.getItems);
-      this.totalResults$ = store.select(fromRoot.getTotalResults);
-      this.totalResults$.subscribe(totalResults => {
-        if (totalResults) {
-          this.hidefooter = 0;
-        }
-        this.end = Math.min(totalResults, this.begin + this.searchdata.rows - 1);
-        this.message = 'showing results ' + this.begin + ' to ' + this.end + ' of ' + totalResults;
-        this.noOfPages = Math.ceil(totalResults / this.searchdata.rows);
-        this.maxPage = Math.min(this.searchdata.rows, this.noOfPages);
-      });
-
       this.searchdata.rows = Number(query['rows']) || 10;
       this.presentPage = Math.abs(query['start'] / this.searchdata.rows) + 1;
 
     });
+    this.totalResults$ = store.select(fromRoot.getTotalResults);
     this.totalResults$.subscribe(totalResults => {
       if (totalResults) {
         this.hidefooter = 0;
@@ -169,12 +169,18 @@ export class ResultsComponent implements OnInit {
       }
 
       this.end = Math.min(totalResults, this.begin + this.searchdata.rows - 1);
-      this.message = 'showing results ' + this.begin + ' to ' + this.end + ' of ' + totalResults;
+      this.message = 'About ' + totalResults + ' results';
       this.noOfPages = Math.ceil(totalResults / this.searchdata.rows);
       this.maxPage = Math.min(this.searchdata.rows, this.noOfPages);
     });
-
-
+    this.resultscomponentchange$ = store.select(fromRoot.getItems);
+    this.resultscomponentchange$.subscribe(res => {
+      this.route.navigate(['/search'], {queryParams: this.searchdata});
+    });
+    this.querychange$ = store.select(fromRoot.getquery);
+    this.querychange$.subscribe(res => {
+      this.searchdata.query = res;
+    });
   };
 
   ngOnInit() {

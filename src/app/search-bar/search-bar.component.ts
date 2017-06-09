@@ -7,7 +7,7 @@ import { Store } from '@ngrx/store';
 import * as fromRoot from '../reducers';
 import { Observable } from 'rxjs';
 import * as query from '../actions/query';
-
+import * as queryactions from '../actions/query';
 @Component({
   selector: 'app-search-bar',
   templateUrl: './search-bar.component.html',
@@ -16,6 +16,7 @@ import * as query from '../actions/query';
 export class SearchBarComponent implements OnInit, AfterViewInit {
   @ViewChildren('input') vc;
   query$: Observable<any>;
+  displayStatus: any;
   searchdata = {
     query: '',
     verify: false,
@@ -26,8 +27,9 @@ export class SearchBarComponent implements OnInit, AfterViewInit {
     resource: 'global',
     prefermaskfilter: '',
     maximumRecords: 10,
-    timezoneOffset: 0
+    timezoneOffset: 0,
   };
+  querydata$: Observable<any>;
   constructor(private route: ActivatedRoute,
     private router: Router, private store: Store<fromRoot.State>) {
     this.query$ = store.select(fromRoot.getquery);
@@ -37,22 +39,45 @@ export class SearchBarComponent implements OnInit, AfterViewInit {
     });
 
   };
-
-  onquery(event: any) {
-
-    this.store.dispatch(new query.QueryAction(event.target.value));
-
-    this.submit();
+  hidebox(event: any) {
+    if (event.which === 13) {
+      this.displayStatus = 'hidebox';
+    }
   }
+  hidesuggestions(data: number) {
+    if (data === 1) {
+      this.displayStatus = 'hidebox';
+    } else {
+      this.displayStatus = 'showbox';
+    }
+  }
+  onquery(event: any) {
+    this.store.dispatch(new query.QueryAction(event.target.value));
+    if (event.target.value.length > 0) {
+      this.store.dispatch(new queryactions.QueryServerAction({'query': this.searchdata.query}));
+      this.displayStatus = 'showbox';
+      this.submit();
+      this.hidebox(event);
+    } else {
 
+    }
+  }
+  ShowAuto() {
+    return (this.displayStatus === 'showbox');
+  }
   ngOnInit() {
-    this.searchdata.timezoneOffset = new Date().getTimezoneOffset();
+    this.displayStatus = 'hidebox';
   }
   ngAfterViewInit() {
     this.vc.first.nativeElement.focus();
   }
   submit() {
-    this.router.navigate(['/search'], { queryParams: this.searchdata });
+    if (this.searchdata.query.toString().length !== 0) {
+      if (!this.router.url.toString().includes('/search')) {
+        this.router.navigate(['/search'], {queryParams: this.searchdata});
+      }
+
+    }
   }
 
 }

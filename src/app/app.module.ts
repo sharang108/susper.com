@@ -28,6 +28,9 @@ import {KnowledgeapiService} from './knowledgeapi.service';
 import { RelatedSearchComponent } from './related-search/related-search.component';
 import {AutocompleteService} from "./autocomplete.service";
 import { AutoCompleteComponent } from './auto-complete/auto-complete.component';
+import { ThemeComponent } from './theme/theme.component';
+import { ThemeService } from './theme.service';
+import {KnowledgeEffects} from "./effects/knowledge";
 
 
 const appRoutes: Routes = [
@@ -57,6 +60,7 @@ const appRoutes: Routes = [
     InfoboxComponent,
     RelatedSearchComponent,
     AutoCompleteComponent,
+    ThemeComponent,
   ],
   imports: [
     BrowserModule,
@@ -67,11 +71,12 @@ const appRoutes: Routes = [
     RouterModule.forRoot(appRoutes),
     StoreModule.provideStore(reducer),
     EffectsModule.run(ApiSearchEffects),
+    EffectsModule.run(KnowledgeEffects),
     StoreDevtoolsModule.instrumentOnlyWithExtension(),
     Ng2Bs3ModalModule
 
   ],
-  providers: [SearchService, KnowledgeapiService, AutocompleteService],
+  providers: [SearchService, KnowledgeapiService, AutocompleteService, ThemeService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
